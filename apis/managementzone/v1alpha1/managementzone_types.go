@@ -26,25 +26,28 @@ import (
 )
 
 // MyTypeParameters are the configurable fields of a MyType.
-type MyTypeParameters struct {
+type ManagementzoneParameters struct {
 	ConfigurableField string `json:"configurableField"`
 }
 
 // MyTypeObservation are the observable fields of a MyType.
-type MyTypeObservation struct {
+type ManagementzoneObservation struct {
 	ObservableField string `json:"observableField,omitempty"`
 }
 
 // A MyTypeSpec defines the desired state of a MyType.
-type MyTypeSpec struct {
+//crossplane runtime package
+//forProvider is sent to provider
+type ManagementzoneSpec struct {
 	xpv1.ResourceSpec `json:",inline"`
-	ForProvider       MyTypeParameters `json:"forProvider"`
+	ForProvider       ManagementzoneParameters `json:"forProvider"`
+	//forprovider is actual struct sent to dynatrace provider
 }
 
 // A MyTypeStatus represents the observed state of a MyType.
-type MyTypeStatus struct {
+type ManagementzoneStatus struct {
 	xpv1.ResourceStatus `json:",inline"`
-	AtProvider          MyTypeObservation `json:"atProvider,omitempty"`
+	AtProvider          ManagementzoneObservation `json:"atProvider,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -56,31 +59,31 @@ type MyTypeStatus struct {
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,categories={crossplane,managed,dynatrace}
-type MyType struct {
+type Managementzone struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   MyTypeSpec   `json:"spec"`
-	Status MyTypeStatus `json:"status,omitempty"`
+	Spec   ManagementzoneSpec `json:"spec"`
+	Status Managementzone     `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
 // MyTypeList contains a list of MyType
-type MyTypeList struct {
+type ManagementzoneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MyType `json:"items"`
+	Items           []Managementzone `json:"items"`
 }
 
 // MyType type metadata.
 var (
-	MyTypeKind             = reflect.TypeOf(MyType{}).Name()
-	MyTypeGroupKind        = schema.GroupKind{Group: Group, Kind: MyTypeKind}.String()
-	MyTypeKindAPIVersion   = MyTypeKind + "." + SchemeGroupVersion.String()
-	MyTypeGroupVersionKind = SchemeGroupVersion.WithKind(MyTypeKind)
+	ManagementzoneKind             = reflect.TypeOf(Managementzone{}).Name()
+	ManagementzoneGroupKind        = schema.GroupKind{Group: Group, Kind: ManagementzoneKind}.String()
+	ManagementzoneAPIVersion       = ManagementzoneKind + "." + SchemeGroupVersion.String()
+	ManagementzoneGroupVersionKind = SchemeGroupVersion.WithKind(ManagementzoneKind)
 )
 
 func init() {
-	SchemeBuilder.Register(&MyType{}, &MyTypeList{})
+	SchemeBuilder.Register(&Managementzone{}, &Managementzone{})
 }

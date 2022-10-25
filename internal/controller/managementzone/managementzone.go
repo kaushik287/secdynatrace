@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mytype
+package managementzone
 
 import (
 	"context"
@@ -32,16 +32,18 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 
+	//added path here
+	"github.com/crossplane/provider-dynatrace/apis/managementzone/v1alpha1"
 	"github.com/crossplane/provider-dynatrace/apis/sample/v1alpha1"
 	apisv1alpha1 "github.com/crossplane/provider-dynatrace/apis/v1alpha1"
 	"github.com/crossplane/provider-dynatrace/internal/controller/features"
 )
 
 const (
-	errNotMyType    = "managed resource is not a MyType custom resource"
-	errTrackPCUsage = "cannot track ProviderConfig usage"
-	errGetPC        = "cannot get ProviderConfig"
-	errGetCreds     = "cannot get credentials"
+	errNotManagementzone = "managed resource is not a Managementzone custom resource"
+	errTrackPCUsage      = "cannot track ProviderConfig usage"
+	errGetPC             = "cannot get ProviderConfig"
+	errGetCreds          = "cannot get credentials"
 
 	errNewClient = "cannot create new Service"
 )
@@ -53,9 +55,9 @@ var (
 	newNoOpService = func(_ []byte) (interface{}, error) { return &NoOpService{}, nil }
 )
 
-// Setup adds a controller that reconciles MyType managed resources.
+// Setup adds a controller that reconciles Managementzone managed resources.
 func Setup(mgr ctrl.Manager, o controller.Options) error {
-	name := managed.ControllerName(v1alpha1.MyTypeGroupKind)
+	name := managed.ControllerName(v1alpha1.ManagementzoneKind)
 
 	cps := []managed.ConnectionPublisher{managed.NewAPISecretPublisher(mgr.GetClient(), mgr.GetScheme())}
 	if o.Features.Enabled(features.EnableAlphaExternalSecretStores) {
@@ -63,9 +65,9 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 	}
 
 	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(v1alpha1.MyTypeGroupVersionKind),
-		managed.WithExternalConnecter(&connector{
-			kube:         mgr.GetClient(),
+		resource.ManagedKind(v1alpha1.ManagementzoneGroupVersionKind),
+		managed.WithExternalConnecter(&connector{ //look changes below pass in actual funtion for client API
+			kube: mgr.GetClient(), newManagementzoneClient: newManagementzoneAPI,
 			usage:        resource.NewProviderConfigUsageTracker(mgr.GetClient(), &apisv1alpha1.ProviderConfigUsage{}),
 			newServiceFn: newNoOpService}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
@@ -75,16 +77,18 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		WithOptions(o.ForControllerRuntime()).
-		For(&v1alpha1.MyType{}).
+		For(&v1alpha1.Managementzone{}).
 		Complete(ratelimiter.NewReconciler(name, r, o.GlobalRateLimiter))
 }
 
 // A connector is expected to produce an ExternalClient when its Connect method
 // is called.
-type connector struct {
-	kube         client.Client
-	usage        resource.Tracker
-	newServiceFn func(creds []byte) (interface{}, error)
+type connector struct { //changed below
+	client client.Client
+	//added code below
+	newManagementzoneClient //add function signature for creation of complete
+	usage                   resource.Tracker
+	newServiceFn            func(creds []byte) (interface{}, error)
 }
 
 // Connect typically produces an ExternalClient by:
@@ -93,9 +97,10 @@ type connector struct {
 // 3. Getting the credentials specified by the ProviderConfig.
 // 4. Using the credentials to form a client.
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*v1alpha1.MyType)
+
+	cr, ok := mg.(*v1alpha1.Managementzone)
 	if !ok {
-		return nil, errors.New(errNotMyType)
+		return nil, errors.New(errNotManagementzone)
 	}
 
 	if err := c.usage.Track(ctx, mg); err != nil {
@@ -112,7 +117,9 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	if err != nil {
 		return nil, errors.Wrap(err, errGetCreds)
 	}
-
+	// to check managed resource type we use above functions everytime for every resources
+	//just to check in each method like managementzone should is used
+	//in above functions we are fetching API from kubernetes API
 	svc, err := c.newServiceFn(data)
 	if err != nil {
 		return nil, errors.Wrap(err, errNewClient)
@@ -126,13 +133,15 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 type external struct {
 	// A 'client' used to connect to the external resource API. In practice this
 	// would be something like an AWS SDK client.
-	service interface{}
+	//service interface{}
+	//added new code here on 24/10/2022
+	client client.Client
 }
 
 func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.ExternalObservation, error) {
-	cr, ok := mg.(*v1alpha1.MyType)
+	cr, ok := mg.(*v1alpha1.Managementzone)
 	if !ok {
-		return managed.ExternalObservation{}, errors.New(errNotMyType)
+		return managed.ExternalObservation{}, errors.New(errNotManagementzone)
 	}
 
 	// These fmt statements should be removed in the real implementation.
@@ -156,9 +165,9 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 }
 
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
-	cr, ok := mg.(*v1alpha1.MyType)
+	cr, ok := mg.(*v1alpha1.Managementzone)
 	if !ok {
-		return managed.ExternalCreation{}, errors.New(errNotMyType)
+		return managed.ExternalCreation{}, errors.New(errNotManagementzone)
 	}
 
 	fmt.Printf("Creating: %+v", cr)
@@ -171,9 +180,9 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
-	cr, ok := mg.(*v1alpha1.MyType)
+	cr, ok := mg.(*v1alpha1.Managementzone)
 	if !ok {
-		return managed.ExternalUpdate{}, errors.New(errNotMyType)
+		return managed.ExternalUpdate{}, errors.New(errNotManagementzone)
 	}
 
 	fmt.Printf("Updating: %+v", cr)
@@ -186,9 +195,9 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (c *external) Delete(ctx context.Context, mg resource.Managed) error {
-	cr, ok := mg.(*v1alpha1.MyType)
+	cr, ok := mg.(*v1alpha1.Managementzone)
 	if !ok {
-		return errors.New(errNotMyType)
+		return errors.New(errNotManagementzone)
 	}
 
 	fmt.Printf("Deleting: %+v", cr)
